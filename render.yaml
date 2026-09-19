@@ -1,0 +1,52 @@
+﻿services:
+  # Backend API (FastAPI on Python)
+  - type: web
+    name: hireshield-api
+    runtime: python
+    region: oregon
+    plan: starter
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: DYNAMODB_TABLE
+        value: "hireshield-analyses"
+      - key: S3_BUCKET
+        sync: false
+      - key: BEDROCK_MODEL_ID
+        value: "anthropic.claude-3-haiku-20240307-v1:0"
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "10"
+      - key: MAX_PDF_PAGES
+        value: "10"
+      - key: RATE_LIMIT_PER_HOUR
+        value: "60"
+      - key: LOG_LEVEL
+        value: "INFO"
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # Frontend (Vite + React, served via Node/Express)
+  - type: web
+    name: hireshield-web
+    runtime: node
+    region: oregon
+    plan: starter
+    buildCommand: "cd frontend && pnpm install && pnpm run build"
+    startCommand: "cd frontend && node dist/index.js"
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          name: hireshield-api
+          type: web
+          property: hostport
+    autoDeploy: true
